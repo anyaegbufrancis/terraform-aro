@@ -1,3 +1,5 @@
+## This file contains ALL variables. To deploy any environment, customize this 
+## file only
 variable "cluster_name" {
   type        = string
   description = <<EOF

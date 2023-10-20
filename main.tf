@@ -1,4 +1,5 @@
-## Read Existing subnets
+## Reads details of existing worker and control subnets. 
+## This section is for existing subnets
 data "azurerm_subnet" "control_subnet" {
   name                 = var.azr_control_subnet
   virtual_network_name = var.azr_vnet
@@ -11,13 +12,15 @@ data "azurerm_subnet" "worker_subnet" {
   resource_group_name  = var.azr_resource_group_vnet
 }
 
-## Read Resource Group
+## Read details of existing resource group named in variable resource_group_name
 
 data "azurerm_resource_group" "resource_group_base" {
   name = var.resource_group_name
 }
 
-## Read pull_secret, service principal ID and Secret from Azure Key Vault
+## Read pull_secret, service principal ID and Secret from existingAzure Key Vault
+## User account logged in using 'az login' must have read access to Azure Key Vault
+## pull secret and service principal details required to create the aro cluster.
 data "azurerm_key_vault" "key_vault" {
   name                = var.akv_name
   resource_group_name = var.akv_resource_group
@@ -38,12 +41,15 @@ data "azurerm_key_vault_secret" "sp_client_secret" {
   key_vault_id = data.azurerm_key_vault.key_vault.id
 }
 
-## ARO Cluster Deploy
+## This module creates the aro cluster. 
+## https://github.com/rh-mobb/terraform-provider-azureopenshift/blob/main/azureopenshift/redhatopenshift_cluster_resource.go
+## and https://github.com/rh-mobb/terraform-provider-azureopenshift/blob/main/docs/resources/redhatopenshift_cluster.md
+## For relevant options
 
 resource "azureopenshift_redhatopenshift_cluster" "cluster" {
   name                   = var.cluster_name
   location               = var.location
-  resource_group_name    = var.main.name
+  resource_group_name    = var.resource_group_name
   cluster_resource_group = var.resource_group_managed
   tags                   = var.tags
 
@@ -77,7 +83,7 @@ resource "azureopenshift_redhatopenshift_cluster" "cluster" {
     version                = var.aro_version
     domain                 = var.domain_name
     fips_validated_modules = var.fips
-    resource_group_id      = var.resource_group_base.id
+    resource_group_id      = data.azurerm_resource_group.resource_group_base.id
   }
 
   network_profile {
