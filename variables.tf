@@ -1,117 +1,211 @@
 variable "cluster_name" {
   type        = string
-  default     = "my-aro-cluster"
-  description = "ARO cluster name"
+  description = <<EOF
+  *** AZR_CLUSTER_NAME ***
+  The name of the cluster is embedded in the 
+  FQDN uris of the cluster 
+  (eg: https://console-openshift-console.apps.sandbox.usgovvirginia.aroapp.azure.us/)
+  EOF
+  default     = "sandbox"
 }
 
-variable "tags" {
-  type = map(string)
-  default = {
-    environment = "development"
-    owner       = "your@email.address"
-  }
+variable "domain_name" {
+  type        = string
+  description = <<EOF
+  *** AZR_CLUSTER_NAME ***
+  ARO Domain name
+  EOF
+  default     = "sandbox"
+}
+
+variable "pod_cidr" {
+  type        = string
+  description = <<EOF
+  *** AZR_POD_CIDR ***
+  Cluster Pod CIDR
+  EOF
+  default     = "10.redacted/18"
+}
+
+variable "service_cidr" {
+  type        = string
+  description = <<EOF
+  *** AZR_SERVICE_CIDR ***
+  ARO Service CIDR
+  EOF
+  default     = "172.32.0.0/16"
 }
 
 variable "location" {
   type        = string
+  description = <<EOF
+  *** AZR_RESOURCE_LOCATION ***
+  ARO Azure Location
+  EOF
+  default     = "usgovvirginia"
+}
+
+variable "region" {
+  type        = string
+  description = <<EOF
+  *** AZR_REGION ***
+  Cluster ARO Region
+  EOF
   default     = "eastus"
-  description = "Azure region"
 }
 
 variable "resource_group_name" {
   type        = string
-  default     = null
-  description = "ARO resource group name"
-}
-
-variable "aro_virtual_network_cidr_block" {
-  type        = string
-  default     = "10.0.0.0/20"
-  description = "cidr range for aro virtual network"
-}
-
-variable "aro_control_subnet_cidr_block" {
-  type        = string
-  default     = "10.0.0.0/23"
-  description = "cidr range for aro control plane subnet"
-}
-
-variable "aro_machine_subnet_cidr_block" {
-  type        = string
-  default     = "10.0.2.0/23"
-  description = "cidr range for aro machine subnet"
-}
-
-variable "aro_jumphost_subnet_cidr_block" {
-  type        = string
-  default     = "10.0.4.0/23"
-  description = "cidr range for bastion / jumphost"
-}
-
-variable "aro_firewall_subnet_cidr_block" {
-  type        = string
-  default     = "10.0.6.0/23"
-  description = "cidr range for Azure Firewall virtual network"
-}
-
-variable "aro_private_endpoint_cidr_block" {
-  type        = string
-  default     = "10.0.8.0/23"
-  description = "cidr range for Azure Firewall virtual network"
-}
-
-variable "restrict_egress_traffic" {
-  type        = bool
-  default     = false
   description = <<EOF
-  Enable the Restrict Egress Traffic for Private ARO clusters.
-  Default "false"
+  *** AZR_RESOURCE_GROUP_BASE ***
+  A pre-existing AzureGov RG within AZR_SUBSCRIPTION where you want the ARO resource type to be installed
+  - NOTE: the installer will create a single ARO resource in this RG. All cluster infrastructure will be created 
+  in the AZR_RESOURCE_GROUP_MANAGED defined below
   EOF
+  default     = "EKHO-GV-D-RGP-CUST-01"
+}
+
+variable "resource_group_vnet" {
+  type        = string
+  description = <<EOF
+  *** AZR_RESOURCE_GROUP_VNET ***
+  A pre-existing AzureGov RG within AZR_SUBSCRIPTION containing the 
+  VNET for cluster networking.
+  EOF
+  default     = "EKHO-GV-D-RGP-VNT-01"
+}
+
+variable "resource_group_managed" {
+  type        = string
+  description = <<EOF
+  *** AZR_RESOURCE_GROUP_MANAGED ***
+  A non-existent AzureGov RG within AZR_SUBSCRIPTION where the 
+  new cluster infrastructure will be created.
+  EOF
+  default     = "EKHO-GV-D-RGP-CUST-02"
 }
 
 variable "api_server_profile" {
   type        = string
   description = <<EOF
-  Api Server Profile Visibility - Public or Private
-  Default "Public"
+  Ingress Controller Profile Visibility - Public or Private
+  Default "Public".
   EOF
-  default     = "Public"
+  default     = "Private"
 }
 
 variable "ingress_profile" {
   type        = string
   description = <<EOF
   Ingress Controller Profile Visibility - Public or Private
-  Default "Public"
+  Default "Public".
   EOF
-  default     = "Public"
+  default     = "Private"
 }
 
-variable "pull_secret_path" {
-  type        = string
+variable "fips" {
+  type        = bool
+  description = "FIPS Status"
   default     = false
+}
+
+variable "worker_node_count" {
+  type        = number
   description = <<EOF
-  Pull Secret for the ARO cluster
-  Default "false"
+  *** AZR_WORKER_NODE_COUNT ***
+  The initial number and type of worker nodes to be created in 
+  the cluster (1 VM created per node).
   EOF
+  default     = 3
+}
+
+variable "master_vm_size" {
+  type        = string
+  description = <<EOF
+  *** AZR_CONTROL_VMSIZE ***
+  ARO Master Node Instance Size"
+  EOF
+  default     = "Standard_D8s_v5"
+}
+
+variable "worker_vm_size" {
+  type        = string
+  description = <<EOF
+  *** AZR_WORKER_VMSIZE ***
+  The initial number and type of worker nodes to be created in the cluster (1 VM created per node)
+  EOF
+  default     = "Standard_E16s_v3"
+}
+
+variable "worker_vm_disk_size" {
+  type        = string
+  description = <<EOF
+  *** AZR_VM_DISK_SIZE ***
+  ARO Worker VM Disk Size
+  EOF
+  default     = "500"
 }
 
 variable "aro_version" {
   type        = string
   description = <<EOF
   ARO version
-  Default "4.12.25"
+  Default "4.12.33" - ARO_VERSION
   EOF
-  default     = "4.12.25"
+  default     = "4.12.33"
 }
 
-variable "acr_private" {
-  type        = bool
-  default     = false
+variable "tags" {
+  type = map(string)
+  default = {
+    environment = "sandbox"
+    owner       = "your@email.address"
+  }
+}
+
+variable "subscription_id" {
+  type        = string
   description = <<EOF
-  Deploy ACR for Private ARO clusters.
-  Default "false"
+  *** AZR_SUBSCRIPTION_ID ***
+  A pre-existing AzureGov subscription where you want the ARO cluster to be installed
   EOF
+  default     = "8a86e4c3-redacted"
+}
+
+variable "azr_vnet" {
+  type        = string
+  description = <<EOF
+  *** AZR_VNET ***
+  A pre-existing AzureGov /24 vNET within AZR_RESOURCE_GROUP_VNET containing the subnets for cluster networking
+  EOF
+  default     = "EKHO-GV-D-VNT-GF-01"
+}
+
+variable "azr_control_subnet" {
+  type        = string
+  description = <<EOF
+  *** AZR_SUBNET_CONTROL ***
+  A pre-existing AzureGov /26 subnet and associated NSG within AZR_VNET containing the ipaddress space for cluster control plane
+  EOF
+  default     = "EKHO-GV-D-SNT-GF-02"
+}
+
+variable "azr_worker_subnet" {
+  type        = string
+  description = <<EOF
+  *** AZR_SUBNET_WORKER ***
+  A pre-existing AzureGov /25 subnet within AZR_VNET containing the ipaddress space for cluster worker nodes
+  EOF
+  default     = "EKHO-GV-D-SNT-GF-01"
+}
+
+variable "azr_resource_group_vnet" {
+  type        = string
+  description = <<EOF
+  *** AZR_RESOURCE_GROUP_VNET ***
+  A pre-existing AzureGov RG within AZR_SUBSCRIPTION containing the VNET for cluster networking
+  EOF
+  default     = "EKHO-GV-D-RGP-VNT-01"
 }
 
 variable "outbound_type" {
@@ -120,10 +214,46 @@ variable "outbound_type" {
   Outbound Type - Loadbalancer or UserDefinedRouting
   Default "Loadbalancer"
   EOF
-  default     = "Loadbalancer"
+  default     = "UserDefinedRouting"
 }
 
-variable "subscription_id" {
+variable "akv_name" {
   type        = string
-  description = "Azure Subscription ID (needed with the new Auth method)"
+  description = <<EOF
+  Azure Key Vault name
+  EOF
+  default     = "EKHO"
 }
+
+variable "akv_resource_group" {
+  type        = string
+  description = <<EOF
+  Azure Key Vault Resource Group
+  EOF
+  default     = "vault-rg"
+}
+
+variable "cluster_id" {
+  type        = string
+  description = <<EOF
+  ID of ARO Cluster
+  EOF
+  default     = "1"
+}
+
+locals {
+  sp_client_id     = "SP-${var.cluster_id}-ID"
+  sp_client_secret = "SP-${var.cluster_id}-PASS"
+}
+
+variable "pull_secret_name" {
+  type        = string
+  description = <<EOF
+  Pull Secret Name in AKV
+  EOF
+  default     = "PULL_SECRET"
+}
+
+
+
+

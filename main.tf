@@ -1,60 +1,67 @@
-locals {
-  name_prefix = var.cluster_name
+## Read Existing subnets
+data "azurerm_subnet" "control_subnet" {
+  name                 = var.azr_control_subnet
+  virtual_network_name = var.azr_vnet
+  resource_group_name  = var.azr_resource_group_vnet
 }
 
-resource "azurerm_resource_group" "main" {
-  name     = "${local.name_prefix}-rg"
-  location = var.location
-
+data "azurerm_subnet" "worker_subnet" {
+  name                 = var.azr_worker_subnet
+  virtual_network_name = var.azr_vnet
+  resource_group_name  = var.azr_resource_group_vnet
 }
 
-## Network resources
-resource "azurerm_virtual_network" "main" {
-  name                = "${local.name_prefix}-vnet"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  address_space       = [var.aro_virtual_network_cidr_block]
-  tags                = var.tags
+## Read Resource Group
 
+data "azurerm_resource_group" "resource_group_base" {
+  name = var.resource_group_name
 }
 
-resource "azurerm_subnet" "control_plane_subnet" {
-  name                                           = "${local.name_prefix}-cp-subnet"
-  resource_group_name                            = azurerm_resource_group.main.name
-  virtual_network_name                           = azurerm_virtual_network.main.name
-  address_prefixes                               = [var.aro_control_subnet_cidr_block]
-  service_endpoints                              = ["Microsoft.Storage", "Microsoft.ContainerRegistry"]
-  enforce_private_link_service_network_policies  = true
-  enforce_private_link_endpoint_network_policies = true
-
+## Read pull_secret, service principal ID and Secret from Azure Key Vault
+data "azurerm_key_vault" "key_vault" {
+  name                = var.akv_name
+  resource_group_name = var.akv_resource_group
 }
 
-resource "azurerm_subnet" "machine_subnet" {
-  name                 = "${local.name_prefix}-machine-subnet"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = [var.aro_machine_subnet_cidr_block]
-  service_endpoints    = ["Microsoft.Storage", "Microsoft.ContainerRegistry"]
+data "azurerm_key_vault_secret" "pull_secret" {
+  name         = var.pull_secret_name
+  key_vault_id = data.azurerm_key_vault.key_vault.id
 }
 
-## ARO Cluster
+data "azurerm_key_vault_secret" "sp_client_id" {
+  name         = local.sp_client_id
+  key_vault_id = data.azurerm_key_vault.key_vault.id
+}
+
+data "azurerm_key_vault_secret" "sp_client_secret" {
+  name         = local.sp_client_secret
+  key_vault_id = data.azurerm_key_vault.key_vault.id
+}
+
+## ARO Cluster Deploy
 
 resource "azureopenshift_redhatopenshift_cluster" "cluster" {
   name                   = var.cluster_name
-  location               = azurerm_resource_group.main.location
-  resource_group_name    = azurerm_resource_group.main.name
-  cluster_resource_group = "${local.name_prefix}-cluster-rg"
+  location               = var.location
+  resource_group_name    = var.main.name
+  cluster_resource_group = var.resource_group_managed
   tags                   = var.tags
 
   master_profile {
-    subnet_id = azurerm_subnet.control_plane_subnet.id
+    subnet_id = data.azurerm_subnet.control_subnet.id
+    vm_size   = var.master_vm_size
   }
+
   worker_profile {
-    subnet_id = azurerm_subnet.machine_subnet.id
+    subnet_id    = data.azurerm_subnet.worker_subnet.id
+    node_count   = var.worker_node_count
+    vm_size      = var.worker_vm_size
+    disk_size_gb = var.worker_vm_disk_size
   }
+
   service_principal {
-    client_id     = azuread_application.cluster.application_id
-    client_secret = azuread_application_password.cluster.value
+    client_id     = data.azurerm_key_vault_secret.sp_client_id.value
+    client_secret = data.azurerm_key_vault_secret.sp_client_secret.value
   }
 
   api_server_profile {
@@ -66,16 +73,16 @@ resource "azureopenshift_redhatopenshift_cluster" "cluster" {
   }
 
   cluster_profile {
-    pull_secret = file(var.pull_secret_path)
-    version     = var.aro_version
+    pull_secret            = data.azurerm_key_vault_secret.pull_secret.value
+    version                = var.aro_version
+    domain                 = var.domain_name
+    fips_validated_modules = var.fips
+    resource_group_id      = var.resource_group_base.id
   }
 
   network_profile {
     outbound_type = var.outbound_type
+    pod_cidr      = var.pod_cidr
+    service_cidr  = var.service_cidr
   }
-
-  depends_on = [
-    azurerm_role_assignment.vnet,
-    azurerm_firewall_network_rule_collection.firewall_network_rules
-  ]
 }
