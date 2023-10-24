@@ -26,7 +26,7 @@ variable "pod_cidr" {
   *** AZR_POD_CIDR ***
   Cluster Pod CIDR
   EOF
-  default     = "10.redacted/18"
+  default     = "10.0.0.0/18"
 }
 
 variable "service_cidr" {
@@ -67,16 +67,6 @@ variable "resource_group_name" {
   default     = "EKHO-GV-D-RGP-CUST-01"
 }
 
-variable "resource_group_vnet" {
-  type        = string
-  description = <<EOF
-  *** AZR_RESOURCE_GROUP_VNET ***
-  A pre-existing AzureGov RG within AZR_SUBSCRIPTION containing the 
-  VNET for cluster networking.
-  EOF
-  default     = "EKHO-GV-D-RGP-VNT-01"
-}
-
 variable "resource_group_managed" {
   type        = string
   description = <<EOF
@@ -85,6 +75,16 @@ variable "resource_group_managed" {
   new cluster infrastructure will be created.
   EOF
   default     = "EKHO-GV-D-RGP-CUST-02"
+}
+
+variable "resource_group_vnet" {
+  type        = string
+  description = <<EOF
+  *** AZR_RESOURCE_GROUP_VNET ***
+  A pre-existing AzureGov RG within AZR_SUBSCRIPTION containing the 
+  VNET for cluster networking.
+  EOF
+  default     = "EKHO-GV-D-RGP-VNT-01"
 }
 
 variable "api_server_profile" {
@@ -106,9 +106,9 @@ variable "ingress_profile" {
 }
 
 variable "fips" {
-  type        = bool
+  type        = string
   description = "FIPS Status"
-  default     = false
+  default     = "Disabled"
 }
 
 variable "worker_node_count" {
@@ -136,7 +136,7 @@ variable "worker_vm_size" {
   *** AZR_WORKER_VMSIZE ***
   The initial number and type of worker nodes to be created in the cluster (1 VM created per node)
   EOF
-  default     = "Standard_E16s_v3"
+  default     = "Standard_E4s_v5"
 }
 
 variable "worker_vm_disk_size" {
@@ -154,7 +154,7 @@ variable "aro_version" {
   ARO version
   Default "4.12.33" - ARO_VERSION
   EOF
-  default     = "4.12.33"
+  default     = "4.12.34"
 }
 
 variable "tags" {
@@ -171,7 +171,7 @@ variable "subscription_id" {
   *** AZR_SUBSCRIPTION_ID ***
   A pre-existing AzureGov subscription where you want the ARO cluster to be installed
   EOF
-  default     = "8a86e4c3-redacted"
+  default     = "6cc4444k4k4k6d-34442-3344d8-98333-8a519e009009036"
 }
 
 variable "azr_vnet" {
@@ -232,7 +232,7 @@ variable "akv_resource_group" {
   description = <<EOF
   Azure Key Vault Resource Group
   EOF
-  default     = "vault-rg"
+  default     = "azurestack"
 }
 
 variable "cluster_id" {
@@ -246,6 +246,7 @@ variable "cluster_id" {
 locals {
   sp_client_id     = "SP-${var.cluster_id}-ID"
   sp_client_secret = "SP-${var.cluster_id}-PASS"
+  pull_secret      = var.pull_secret_name
 }
 
 variable "pull_secret_name" {
@@ -253,7 +254,7 @@ variable "pull_secret_name" {
   description = <<EOF
   Pull Secret Name in AKV
   EOF
-  default     = "PULL_SECRET"
+  default     = "pullSecret"
 }
 
 
